@@ -1,1 +1,1 @@
-# nanocalc
+# NanoCalc
