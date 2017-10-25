@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 #include <map>
+#include <set>
 
 class Calc {
 public:
@@ -11,14 +12,15 @@ public:
     const int ERROR_EXPRESSION = 1;
     const int ERROR_DIVZERO = 2;
     const int ERROR_RANGE = 3;
+    const int ERROR_CICLE = 4;
 
 private:
     int ROWS, COLS;
-
     const std::pair<int, double> BAD_EXPRESSION = {ERROR_EXPRESSION, 0.0};
     const double EPS = 1e-10;
 
     std::map<int, std::tuple<int, bool, double, std::string>> calc;
+    std::set<int> ciclemem;
 
     std::string crearExpression(const std::string &exp) {
         std::string clean;
@@ -41,8 +43,8 @@ private:
             char op = *it;
             auto retr = expression(++it, end);
             if (retr.first != SUCCESS) return retr;
-            if (op == '+') return {SUCCESS, retl.second + retr.second};
-            return {SUCCESS, retl.second - retr.second};
+            if (op == '+') return {SUCCESS, retr.second + retl.second};
+            return {SUCCESS, retr.second - retl.second};
         }
         return retl;
     }
@@ -93,7 +95,10 @@ private:
         if (*it == '-') nu.push_back('-'), ++it;
         for (; it != end && isdigit(*it); it++)
             nu.push_back(*it);
-        if (it == end || *it != '.') return {SUCCESS, std::stod(nu)};
+        if (it == end || *it != '.') {
+            if (nu == "-") return BAD_EXPRESSION;
+            return {SUCCESS, std::stod(nu)};
+        }
         if (*it == '.') nu.push_back(*it), ++it;
         for (; it != end && isdigit(*it); it++)
             nu.push_back(*it);
@@ -122,7 +127,23 @@ private:
         if (!std::get<1>(e)) {
             std::string cleanExpression = crearExpression(std::get<3>(e));
             std::string::iterator it = cleanExpression.begin();
+            if (cleanExpression.empty()) {
+                std::pair<int, double> empty = {SUCCESS, 0.0};
+                std::get<0>(e) = empty.first;
+                std::get<1>(e) = true;
+                std::get<2>(e) = empty.second;
+                return empty;
+            }
+            if (ciclemem.count(id)) return {ERROR_CICLE, 0.0};
+            ciclemem.insert(id);
             auto res = evaluateExpression(it, cleanExpression.end());
+            ciclemem.erase(id);
+            if (it != cleanExpression.end()) {
+                std::get<0>(e) = BAD_EXPRESSION.first;
+                std::get<1>(e) = true;
+                std::get<2>(e) = BAD_EXPRESSION.second;
+                return BAD_EXPRESSION;
+            }
             std::get<0>(e) = res.first;
             std::get<1>(e) = true;
             std::get<2>(e) = res.second;
@@ -147,12 +168,28 @@ public:
         }
     }
 
+    bool exist(std::string cell) {
+        return exist(cellToId(cell));
+    }
+
+    bool exist(int id) {
+        return !std::get<3>(calc[id]).empty();
+    }
+
     void setCell(std::string cell, std::string exp) {
         return setCell(cellToId(cell), exp);
     }
 
     void setCell(int id, std::string exp) {
         calc[id] = std::make_tuple(SUCCESS, false, 0.0, exp);
+    }
+
+    std::tuple<int, bool, double, std::string> getCell(std::string cell) {
+        return calc[cellToId(cell)];
+    }
+
+    std::tuple<int, bool, double, std::string> getCell(int id) {
+        return calc[id];
     }
 
     std::pair<int, double> getCellValue(int id) {

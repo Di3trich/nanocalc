@@ -13,7 +13,6 @@ private:
     HWND hwnd;
     const int ROWS = 25;
     const int COLS = 10;
-    Calc calc;
 
 public:
     static HWND edit;
@@ -23,6 +22,10 @@ public:
     static HWND *hLabel;
     static HWND *vLabel;
     static HWND *values;
+    static int winRow;
+    static int winCol;
+    static Calc calc;
+    static int selectedWinCell;
 
     explicit NanoWindow(HWND _hwnd) : hwnd(_hwnd) {}
 
@@ -56,40 +59,91 @@ public:
                                              WS_CHILD | WS_VISIBLE | SS_SUNKEN | SS_CENTER | SS_CENTERIMAGE,
                                              j * 70 + 50, 41, 71, 20, hwnd, (HMENU) ID_LABEL, NULL, NULL);
                 }
-                values[i * COLS + j] = CreateWindow("edit", "",
-                                                  WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_RIGHT,
-                                                  j * 70 + 50, i * 20 + 60, 71, 21, hwnd, (HMENU) ID_FORMULA, NULL,
-                                                  NULL);
+                int id = i * COLS + j;
+                values[id] = CreateWindow("edit", "",
+                                          WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_RIGHT | ES_READONLY,
+                                          j * 70 + 50, i * 20 + 60, 71, 21, hwnd, (HMENU) (ID_CELL + id), NULL, NULL);
             }
         }
         onVTrack();
         onHTrack();
 
-        calc.setCell("a999", "34");
-        calc.setCell("a1000", "(5+5)*3+a999");
+        calc.setCell("c5", "34");
+        calc.setCell("c6", "(5+5)*3+c5");
         auto res = calc.getCellValue("a1000");
         std::cout << res.first << ' ' << res.second << std::endl;
     }
 
     void executeEvent(int lo, int hi) {
         if (lo == ID_INSERT && hi == BN_CLICKED) return onSetTitle();
+        if (hi == EN_SETFOCUS && lo >= ID_CELL && lo < ROWS * COLS + ID_CELL) return onSetFocus(lo - ID_CELL);
+    }
+
+    int getCellId(int idCell) {
+        int row = idCell / COLS + winRow * ROWS;
+        int col = idCell % COLS + winCol * COLS;
+        return row * 1000 + col;
+    }
+
+    void onSetFocus(int idCell) {
+        auto cell = calc.getCell(getCellId(idCell));
+        selectedWinCell = idCell;
+        SetWindowText(edit, std::get<3>(cell).c_str());
+    }
+
+    void loadWindow() {
+        char text[100] = {};
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLS; j++) {
+                int indexCell = i * COLS + j;
+                int memIdCell = getCellId(indexCell);
+                if (calc.exist(memIdCell)) {
+                    auto value = calc.getCellValue(memIdCell);
+                    if(value.first==calc.SUCCESS) {
+                        sprintf(text, "%.2lf", value.second);
+                        SetWindowText(values[indexCell], text);
+                    }else if(value.first==calc.ERROR_EXPRESSION){
+                        SetWindowText(values[indexCell], "#EXPRESSION#");
+                    }else if(value.first==calc.ERROR_DIVZERO){
+                        SetWindowText(values[indexCell], "#DIV-CERO#");
+                    }else if(value.first==calc.ERROR_RANGE){
+                        SetWindowText(values[indexCell], "#FUERA_RANGO#");
+                    }else if(value.first==calc.ERROR_CICLE){
+                        SetWindowText(values[indexCell], "#CICLO#");
+                    }else{
+                        SetWindowText(values[indexCell], "#DESCONOCIDO#");
+                    }
+                } else {
+                    SetWindowText(values[indexCell], "");
+                }
+            }
+        }
     }
 
     void onSetTitle() {
-
+        char text[100000];
+        GetWindowText(edit, text, 100000);
+        if (selectedWinCell != -1) {
+            calc.setCell(getCellId(selectedWinCell), text);
+            calc.clearCache();
+        }
+        loadWindow();
     }
 
     void onVTrack() {
         LRESULT pos = SendMessageW(vTrack, TBM_GETPOS, 0, 0);
+        winRow = pos;
         char txt[100] = {};
         for (int i = 0; i < ROWS; i++) {
             sprintf(txt, "%d", (int) pos * ROWS + i + 1);
             SetWindowText(vLabel[i], txt);
         }
+        loadWindow();
     }
 
     void onHTrack() {
         LRESULT pos = SendMessageW(hTrack, TBM_GETPOS, 0, 0);
+        winCol = pos;
         char txt[100] = {};
         for (int i = 0; i < COLS; i++) {
             int n = (int) pos * COLS + i + 1, p = 0;
@@ -105,6 +159,7 @@ public:
             txt[p] = '\0';
             SetWindowText(hLabel[i], txt);
         }
+        loadWindow();
     }
 };
 
@@ -115,5 +170,9 @@ HWND NanoWindow::hTrack = NULL;
 HWND *NanoWindow::hLabel = NULL;
 HWND *NanoWindow::vLabel = NULL;
 HWND *NanoWindow::values = NULL;
+int NanoWindow::winRow = 0;
+int NanoWindow::winCol = 0;
+int NanoWindow::selectedWinCell = -1;
+Calc NanoWindow::calc;
 
 #endif

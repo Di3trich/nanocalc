@@ -7,4 +7,6 @@
 #define ID_VTRACK 1003
 #define ID_HTRACK 1004
 
+#define ID_CELL 2000
+
 #endif
