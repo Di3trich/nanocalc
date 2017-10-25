@@ -3,5 +3,5 @@ project(nanocalc)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES main.cpp nano_window.hpp calc.hpp)
 add_executable(nanocalc ${SOURCE_FILES})

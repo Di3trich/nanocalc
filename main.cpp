@@ -1,5 +1,7 @@
 #include <windows.h>
 
+#include "nano_window.hpp"
+
 LRESULT CALLBACK WindowProcedure(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
@@ -19,14 +21,14 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 
     RegisterClassW(&wc);
-    hwnd = CreateWindowW(wc.lpszClassName, L"Nano Calc",
-                         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                         100, 100, 350, 250, NULL, NULL, hThisInstance, NULL);
+    hwnd = CreateWindowW(wc.lpszClassName, L"Nano Calc", WS_OVERLAPPED | WS_SYSMENU, 100, 100, 800, 632, NULL, NULL,
+                         hThisInstance, NULL);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
     while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
@@ -34,7 +36,20 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
 }
 
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    NanoWindow nano(hwnd);
     switch (message) {
+        case WM_CREATE:
+            nano.onCreate();
+            break;
+        case WM_COMMAND:
+            nano.executeEvent(LOWORD(wParam), HIWORD(wParam));
+            break;
+        case WM_HSCROLL:
+            nano.onHTrack();
+            break;
+        case WM_VSCROLL:
+            nano.onVTrack();
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
