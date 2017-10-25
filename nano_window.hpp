@@ -67,15 +67,10 @@ public:
         }
         onVTrack();
         onHTrack();
-
-        calc.setCell("c5", "34");
-        calc.setCell("c6", "(5+5)*3+c5");
-        auto res = calc.getCellValue("a1000");
-        std::cout << res.first << ' ' << res.second << std::endl;
     }
 
     void executeEvent(int lo, int hi) {
-        if (lo == ID_INSERT && hi == BN_CLICKED) return onSetTitle();
+        if (lo == ID_INSERT && hi == BN_CLICKED) return onSetFormula();
         if (hi == EN_SETFOCUS && lo >= ID_CELL && lo < ROWS * COLS + ID_CELL) return onSetFocus(lo - ID_CELL);
     }
 
@@ -120,7 +115,7 @@ public:
         }
     }
 
-    void onSetTitle() {
+    void onSetFormula() {
         char text[100000];
         GetWindowText(edit, text, 100000);
         if (selectedWinCell != -1) {
