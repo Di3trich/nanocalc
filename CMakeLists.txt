@@ -4,4 +4,4 @@ project(nanocalc)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp nano_window.hpp calc.hpp resource.hpp)
-add_executable(nanocalc ${SOURCE_FILES})
+add_executable(nanocalc WIN32 ${SOURCE_FILES})
